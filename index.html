@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Учим стихи — тренажер памяти</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+            --muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sidebar {
+            background: var(--card);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            height: fit-content;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        .poem-list {
+            list-style: none;
+            margin-bottom: 16px;
+        }
+
+        .poem-item {
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            transition: background 0.2s;
+        }
+
+        .poem-item:hover {
+            background: #f1f5f9;
+        }
+
+        .poem-item.active {
+            background: #eef2ff;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0 4px;
+        }
+
+        .delete-btn:hover {
+            color: #ef4444;
+        }
+
+        .main-content {
+            background: var(--card);
+            padding: 28px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .header-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+        }
+
+        button.secondary {
+            background: #f1f5f9;
+            color: var(--text);
+        }
+
+        button.secondary:hover {
+            background: #e2e8f0;
+        }
+
+        button.active-mode {
+            background: #1e293b;
+            color: white;
+        }
+
+        .poem-title {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .poem-author {
+            color: var(--muted);
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+        }
+
+        .poem-display {
+            font-size: 1.2rem;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            min-height: 250px;
+        }
+
+        .line {
+            margin-bottom: 6px;
+            transition: opacity 0.3s;
+        }
+
+        .line.hidden-line {
+            background: #f1f5f9;
+            color: transparent;
+            border-radius: 4px;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .line.hidden-line:hover {
+            background: #e2e8f0;
+        }
+
+        .blank-word {
+            display: inline-block;
+            background: #e2e8f0;
+            color: transparent;
+            border-radius: 4px;
+            padding: 0 4px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .blank-word.revealed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .add-form {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .add-form.visible {
+            display: flex;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .slider-box {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 8px;
+        }
+
+        .slider-box.visible {
+            display: flex;
+        }
+
+        .hint {
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <aside class="sidebar">
+        <h2>Мои тексты</h2>
+        <ul class="poem-list" id="poemList"></ul>
+        <button onclick="toggleAddForm()" style="width: 100%;">+ Добавить текст</button>
+    </aside>
+
+    <main class="main-content">
+        <div class="add-form" id="addForm">
+            <h2>Добавить произведение</h2>
+            <input type="text" id="newTitle" placeholder="Название (например: У лукоморья дуб зелёный)">
+            <input type="text" id="newAuthor" placeholder="Автор (например: А. С. Пушкин)">
+            <textarea id="newText" placeholder="Вставьте сюда текст стихотворения или прозы..."></textarea>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="saveNewPoem()">Сохранить</button>
+                <button class="secondary" onclick="toggleAddForm()">Отмена</button>
+            </div>
+        </div>
+
+        <div id="studyArea">
+            <div class="header-controls">
+                <button class="secondary active-mode" id="btn-read" onclick="setMode('read')">Читать целиком</button>
+                <button class="secondary" id="btn-lines" onclick="setMode('lines')">Построчно</button>
+                <button class="secondary" id="btn-blanks" onclick="setMode('blanks')">Скрыть слова</button>
+                <button class="secondary" id="btn-letters" onclick="setMode('letters')">Первые буквы</button>
+            </div>
+
+            <div class="slider-box" id="blanksControl">
+                <label for="hidePercent">Скрыть слов: <strong id="percentVal">40%</strong></label>
+                <input type="range" id="hidePercent" min="15" max="85" value="40" oninput="updateBlanks()">
+                <button class="secondary" onclick="updateBlanks()">Перемешать</button>
+            </div>
+
+            <div class="slider-box" id="linesControl">
+                <button onclick="revealNextLine()">Открыть следующую строку (Пробел)</button>
+                <button class="secondary" onclick="resetLines()">Скрыть все заново</button>
+            </div>
+
+            <h1 class="poem-title" id="displayTitle"></h1>
+            <div class="poem-author" id="displayAuthor"></div>
+            <div class="poem-display" id="poemDisplay"></div>
+            <div class="hint" id="modeHint"></div>
+        </div>
+    </main>
+</div>
+<script>
+    const defaultPoems = [
+        {
+            id: 1,
+            title: "Парус",
+            author: "М. Ю. Лермонтов",
+            text: "Белеет парус одинокой\nВ тумане моря голубом!..\nЧто ищет он в стране далекой?\nЧто кинул он в краю родном?..\n\nИграют волны — ветер свищет,\nИ мачта гнется и скрыпит...\nУвы! он счастия не ищет\nИ не от счастия бежит!\n\nПод ним струя светлей лазури,\nНад ним луч солнца золотой...\nА он, мятежный, просит бури,\nКак будто в бурях есть покой!"
+        },
+        {
+            id: 2,
+            title: "Зимнее утро (отрывок)",
+            author: "А. С. Пушкин",
+            text: "Мороз и солнце; день чудесный!\nЕще ты дремлешь, друг прелестный —\nПора, красавица, проснись:\nОткрой сомкнуты негой взоры\nНавстречу северной Авроры,\nЗвездою севера явись!"
+        }
+    ];
+
+    let poems = JSON.parse(localStorage.getItem('savedPoems')) || defaultPoems;
+    let currentPoemId = poems.length > 0 ? poems[0].id : null;
+    let currentMode = 'read';
+    let revealedLinesCount = 0;
+
+    function init() {
+        renderSidebar();
+        if (currentPoemId) {
+            selectPoem(currentPoemId);
+        }
+    }
+
+    function renderSidebar() {
+        const list = document.getElementById('poemList');
+        list.innerHTML = '';
+        poems.forEach(poem => {
+            const li = document.createElement('li');
+            li.className = `poem-item ${poem.id === currentPoemId ? 'active' : ''}`;
+            li.innerHTML = `
+                <span onclick="selectPoem(${poem.id})" style="flex: 1;">${poem.title}</span>
+                <button class="delete-btn" onclick="deletePoem(${poem.id}, event)" title="Удалить">×</button>
+            `;
+            list.appendChild(li);
+        });
+    }
+
+    function selectPoem(id) {
+        currentPoemId = id;
+        revealedLinesCount = 0;
+        document.getElementById('addForm').classList.remove('visible');
+        document.getElementById('studyArea').style.display = 'block';
+        renderSidebar();
+        renderPoem();
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        revealedLinesCount = 0;
+
+        document.querySelectorAll('.header-controls button').forEach(btn => btn.classList.remove('active-mode'));
+        document.getElementById(`btn-${mode}`).classList.add('active-mode');
+
+        document.getElementById('blanksControl').classList.toggle('visible', mode === 'blanks');
+        document.getElementById('linesControl').classList.toggle('visible', mode === 'lines');
+
+        renderPoem();
+    }
+
+    function renderPoem() {
+        const poem = poems.find(p => p.id === currentPoemId);
+        if (!poem) return;
+
+        document.getElementById('displayTitle').textContent = poem.title;
+        document.getElementById('displayAuthor').textContent = poem.author;
+        const display = document.getElementById('poemDisplay');
+        const hint = document.getElementById('modeHint');
+        display.innerHTML = '';
+
+        if (currentMode === 'read') {
+            display.textContent = poem.text;
+            hint.textContent = 'Совет: прочитайте текст вслух 2–3 раза, стараясь представить образы.';
+        } 
+        else if (currentMode === 'lines') {
+            const lines = poem.text.split('\n');
+            lines.forEach((line, index) => {
+                const div = document.createElement('div');
+                if (line.trim() === '') {
+                    div.innerHTML = '&nbsp;';
+                } else {
+                    div.textContent = line;
+                    div.className = 'line';
+                    if (index >= revealedLinesCount) {
+                        div.classList.add('hidden-line');
+                        div.onclick = () => div.classList.remove('hidden-line');
+                    }
+                }
+                display.appendChild(div);
+            });
+            hint.textContent = 'Нажимайте на серые полосы или клавишу «Пробел», чтобы проверять себя построчно.';
+        } 
+        else if (currentMode === 'blanks') {
+            updateBlanks();
+            hint.textContent = 'Нажимайте на скрытые слова, чтобы подсмотреть и проверить себя.';
+        }
+        else if (currentMode === 'letters') {
+            const firstLettersText = poem.text.replace(/[а-яА-ЯёЁa-zA-Z0-9]+/g, (word) => {
+                return word[0] + '_'.repeat(word.length - 1);
+            });
+            display.textContent = firstLettersText;
+            hint.textContent = 'Попробуйте вспомнить текст, опираясь только на первые буквы слов.';
+        }
+    }
+
+    function updateBlanks() {
+        const poem = poems.find(p => p.id === currentPoemId);
+        const percent = document.getElementById('hidePercent').value;
+        document.getElementById('percentVal').textContent = percent + '%';
+
+        const display = document.getElementById('poemDisplay');
+        const lines = poem.text.split('\n');
+        display.innerHTML = '';
+
+        lines.forEach(line => {
+            const lineDiv = document.createElement('div');
+            if (line.trim() === '') {
+                lineDiv.innerHTML = '&nbsp;';
+            } else {
+                const tokens = line.split(/(\s+)/);
+                tokens.forEach(token => {
+                    if (token.trim().length > 2 && Math.random() * 100 < percent) {
+                        const span = document.createElement('span');
+                        span.className = 'blank-word';
+                        span.textContent = token;
+                        span.onclick = () => span.classList.toggle('revealed');
+                        lineDiv.appendChild(span);
+                    } else {
+                        lineDiv.appendChild(document.createTextNode(token));
+                    }
+                });
+            }
+            display.appendChild(lineDiv);
+        });
+    }
+
+    function revealNextLine() {
+        const poem = poems.find(p => p.id === currentPoemId);
+        const lines = poem.text.split('\n');
+        while (revealedLinesCount < lines.length) {
+            revealedLinesCount++;
+            if (lines[revealedLinesCount - 1].trim() !== '') break;
+        }
+        renderPoem();
+    }
+
+    function resetLines() {
+        revealedLinesCount = 0;
+        renderPoem();
+    }
+
+    function toggleAddForm() {
+        const form = document.getElementById('addForm');
+        const study = document.getElementById('studyArea');
+        const isVisible = form.classList.toggle('visible');
+        study.style.display = isVisible ? 'none' : 'block';
+    }
+
+    function saveNewPoem() {
+        const title = document.getElementById('newTitle').value.trim();
+        const author = document.getElementById('newAuthor').value.trim() || 'Автор не указан';
+        const text = document.getElementById('newText').value.trim();
+
+        if (!title || !text) {
+            alert('Пожалуйста, заполните название и текст произведения.');
+            return;
+        }
+
+        const newPoem = {
+            id: Date.now(),
+            title,
+            author,
+            text
+        };
+
+        poems.push(newPoem);
+        localStorage.setItem('savedPoems', JSON.stringify(poems));
+
+        document.getElementById('newTitle').value = '';
+        document.getElementById('newAuthor').value = '';
+        document.getElementById('newText').value = '';
+
+        selectPoem(newPoem.id);
+    }
+
+    function deletePoem(id, event) {
+        event.stopPropagation();
+        if (poems.length === 1) {
+            alert('Нельзя удалить последнее произведение.');
+            return;
+        }
+        poems = poems.filter(p => p.id !== id);
+        localStorage.setItem('savedPoems', JSON.stringify(poems));
+        if (currentPoemId === id) {
+            currentPoemId = poems[0].id;
+        }
+        renderSidebar();
+        renderPoem();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && currentMode === 'lines' && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            revealNextLine();
+        }
+    });
+
+    init();
+</script>
+
+</body>
+</html>
